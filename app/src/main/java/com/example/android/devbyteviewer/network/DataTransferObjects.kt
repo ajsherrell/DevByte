@@ -16,6 +16,7 @@
 
 package com.example.android.devbyteviewer.network
 
+import com.example.android.devbyteviewer.database.DatabaseVideo
 import com.example.android.devbyteviewer.domain.DevByteVideo
 import com.squareup.moshi.JsonClass
 
@@ -57,6 +58,25 @@ data class NetworkVideo(
 fun NetworkVideoContainer.asDomainModel(): List<DevByteVideo> {
     return videos.map {
         DevByteVideo(
+                title = it.title,
+                description = it.description,
+                url = it.url,
+                updated = it.updated,
+                thumbnail = it.thumbnail)
+    }
+}
+
+/**
+ * In this sample app, the conversion is simple, and some of this code isn't necessary.
+ * But in a real-world app, the structure of the domain, database, and network objects will be different.
+ * You'll need conversion logic, which can get complicated.
+ * Convert Network results to database objects.
+ * create an extension function called asDatabaseModel().
+ * Use the function to convert network objects into DatabaseVideo database objects.
+ */
+fun NetworkVideoContainer.asDatabaseModel(): List<DatabaseVideo> {
+    return videos.map {
+        DatabaseVideo(
                 title = it.title,
                 description = it.description,
                 url = it.url,

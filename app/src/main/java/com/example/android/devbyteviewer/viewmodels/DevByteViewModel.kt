@@ -22,9 +22,11 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import com.example.android.devbyteviewer.database.getDatabase
 import com.example.android.devbyteviewer.domain.DevByteVideo
 import com.example.android.devbyteviewer.network.DevByteNetwork
 import com.example.android.devbyteviewer.network.asDomainModel
+import com.example.android.devbyteviewer.repository.VideosRepository
 import kotlinx.coroutines.*
 import java.io.IOException
 
@@ -55,18 +57,26 @@ class DevByteViewModel(application: Application) : AndroidViewModel(application)
      */
     private val viewModelScope = CoroutineScope(viewModelJob + Dispatchers.Main)
 
+    //create a private member variable called videosRepository of the type VideosRepository.
+    // Instantiate the variable by passing in the singleton VideosDatabase object.
+    private val videosRepository = VideosRepository(getDatabase(application))
+
     /**
      * A playlist of videos that can be shown on the screen. This is private to avoid exposing a
      * way to set this value to observers.
      */
-    private val _playlist = MutableLiveData<List<DevByteVideo>>()
+    //private val _playlist = MutableLiveData<List<DevByteVideo>>() --replace
+    /**
+     * The data source this ViewModel will fetch results from.
+     */
+    val playlist = videosRepository.videos
 
     /**
      * A playlist of videos that can be shown on the screen. Views should use this to get access
      * to the data.
      */
-    val playlist: LiveData<List<DevByteVideo>>
-        get() = _playlist
+//    val playlist: LiveData<List<DevByteVideo>>
+//        get() = _playlist -- replace
 
 
 
@@ -100,25 +110,50 @@ class DevByteViewModel(application: Application) : AndroidViewModel(application)
      * init{} is called immediately when this ViewModel is created.
      */
     init {
-        refreshDataFromNetwork()
+        //refreshDataFromNetwork() -- replace with data from repository
+        refreshDataFromRepository()
     }
 
     /**
      * Refresh data from network and pass it via LiveData. Use a coroutine launch to get to
      * background thread.
      */
-    private fun refreshDataFromNetwork() = viewModelScope.launch {
+//    private fun refreshDataFromNetwork() = viewModelScope.launch {
+////
+////        try {
+////             val playlist = DevByteNetwork.devbytes.getPlaylist().await()
+////            _playlist.postValue(playlist.asDomainModel())
+////
+////            _eventNetworkError.value = false
+////            _isNetworkErrorShown.value = false
+////
+////        } catch (networkError: IOException) {
+////            //If the internet connection for your emulator or device is good and you don't notice the
+////            // spinning progress bar, simulate the delay in network response using the function delay().
+////            //delay(2000) --removed
+////            // Show a Toast error message and hide the progress bar.
+////            _eventNetworkError.value = true
+////        }
+////    } replace the refreshDataFromNetwork() method with the refreshDataFromRepository() method.
+// The old method, refreshDataFromNetwork(), fetched the video playlist from the network
+// using the Retrofit library. The new method loads the video playlist from the repository.
 
-        try {
-             val playlist = DevByteNetwork.devbytes.getPlaylist().await()
-            _playlist.postValue(playlist.asDomainModel())
-
-            _eventNetworkError.value = false
-            _isNetworkErrorShown.value = false
-
-        } catch (networkError: IOException) {
-            // Show a Toast error message and hide the progress bar.
-            _eventNetworkError.value = true
+    /**
+     * Refresh data from the repository. Use a coroutine launch to run in a
+     * background thread.
+     */
+    private fun refreshDataFromRepository() {
+        viewModelScope.launch {
+            try {
+                videosRepository.refreshVideos()
+                _eventNetworkError.value = false
+                _isNetworkErrorShown.value = false
+            } catch (networkError: IOException) {
+                // show a Toast error message and hide the progress bar.
+                if (playlist.value.isNullOrEmpty()) {
+                    _eventNetworkError.value = true
+                }
+            }
         }
     }
 
